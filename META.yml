@@ -1,16 +1,19 @@
 --- #YAML:1.0
 name: Test-MockRandom
-version: 0.93
-author: ~
+version: 0.94
+author:
+  - David A Golden <dagolden@cpan.org>
 abstract: |-
   Replaces random number generation with non-random number
   generation
 license: perl
+requires:
+  perl: 5.005
 build_requires:
   Test::Exception: 0.19
-  Test::Simple: 0.53
+  Test::More: 0.54
 provides:
   Test::MockRandom:
     file: lib/Test/MockRandom.pm
-    version: 0.93
+    version: 0.94
 generated_by: Module::Build version 0.2606

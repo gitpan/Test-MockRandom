@@ -5,24 +5,28 @@ use blib;
 
 # Test::MockRandom  
 
-use Test::More tests => 8;
+use Test::More tests => 9 ;
 use Test::Exception;
 
 #--------------------------------------------------------------------------#
 # Test package overriding via import
 #--------------------------------------------------------------------------#
 
-use Test::MockRandom qw( __PACKAGE__ SomePackage );
+use Test::MockRandom qw( SomePackage __PACKAGE__ );
 use lib qw( . ./t );
 use SomePackage; 
 
-for (qw ( rand srand oneish export_rand_to )) {
-    can_ok( __PACKAGE__, $_ );
+can_ok( 'SomePackage', 'rand' );
+for ( qw(srand oneish) ) {
+    ok( ! UNIVERSAL::can( 'SomePackage', $_),
+        "confirming $_ wasn't exported to SomePackage");
 }
+            
+can_ok( __PACKAGE__, $_) for qw( rand srand oneish );
+
 
 my $obj = SomePackage->new;
 isa_ok ( $obj, 'SomePackage');
-can_ok ( $obj, qw ( rand ));
 srand(.5,.6);
 is ($obj->next_random(), .5, 'testing $obj->next_random == .5');
 is (rand, .6, 'testing rand == .6 in current package');

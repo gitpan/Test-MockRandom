@@ -5,16 +5,15 @@ use blib;
 
 # Test::MockRandom  
 
-use Test::More tests => 4 ;
+use Test::More tests => 3;
 use Test::Exception;
 
 #--------------------------------------------------------------------------#
-# Test package import -- empty string
+# Test package overriding via import
 #--------------------------------------------------------------------------#
 
-use Test::MockRandom qw();
+use Test::MockRandom qw( __PACKAGE__ );
 
-for (qw( rand srand oneish export_rand_to )) {
-    is ( UNIVERSAL::can( __PACKAGE__, $_), undef, "$_ should not have been imported" );
+for (qw ( rand srand oneish )) {
+    can_ok( __PACKAGE__, $_ );
 }
-

@@ -1,16 +1,5 @@
 TODO list for Perl module Test::MockRandom
 
-# next release
-
-- Better documentation on export_srand_to
-- Catch/suppress rand redefined warning in t/09
-
-# eventually
-
-- Improve API or default exports?
-    - i.e. no args -> export srand and rand to current package
-    - for args, export rand to args and srand to current package
-
+# MAYBE
 - Write a matching "unimport"?
-
 

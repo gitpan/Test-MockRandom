@@ -5,21 +5,21 @@ use blib;
 
 # Test::MockRandom  
 
-use Test::More tests => 7 ;
+use Test::More tests => 6 ;
 use Test::Exception;
 
 #--------------------------------------------------------------------------#
 # Test package overriding via import
 #--------------------------------------------------------------------------#
 
-use Test::MockRandom;
+use Test::MockRandom __PACKAGE__;
 use lib qw( . ./t );
 use SomeRandPackage; 
 
 # SomeRandPackage has its own rand(), so we have to re-override
-BEGIN { Test::MockRandom::export_rand_to('SomeRandPackage') }
+BEGIN { Test::MockRandom->export_rand_to('SomeRandPackage') }
 
-for (qw ( rand srand oneish export_rand_to )) {
+for (qw ( rand srand oneish )) {
     can_ok( __PACKAGE__, $_ );
 }
 

@@ -1,5 +1,10 @@
 Revision history for Perl module Test::MockRandom
 
+0.94 Mon Jan 31 21:11:50 EST 2005
+    - changed exports so that nothing is exported by default
+    - API for "use" changed substantially -- see POD for new API
+    - redefine warnings supressed
+
 0.93 Wed Jan  5 14:44:00 EST 2005
     - added export_srand_to function
     - cleaned up Todo

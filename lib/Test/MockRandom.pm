@@ -1,8 +1,9 @@
 package Test::MockRandom;
+use 5.005;
 use strict;
 use warnings;
 use vars qw ($VERSION);
-$VERSION = "0.93";
+$VERSION = "0.94";
 
 # Required modules
 use Carp;
@@ -24,28 +25,23 @@ generation
 
 =head1 SYNOPSIS
 
-  # functional
-  use Test::MockRandom;
-  srand(0.5);
-  if ( rand() == 0.5 ) { print "good guess!" };
-  
-  # object-oriented
-  use Test::MockRandom ();
-  my $nrng = Test::MockRandom->new(0.42);
-  $nrng->rand(); # returns 0.42
-  
-  # override rand in another package
+  # intercept rand in another package
   use Test::MockRandom 'Some::Other::Package';
-  use Some::Other::Package; # contains sub foo { return rand }
+  use Some::Other::Package; # exports sub foo { return rand }
   srand(0.13);
-  Some::Other::Package::foo; # returns 0.13
+  foo(); # returns 0.13
   
   # using a seed list and "oneish"
   srand(0.23, 0.34, oneish() );
-  rand(); # returns 0.23
-  rand(); # returns 0.34
-  rand(); # returns a number just barely less than one
-  rand(); # returns 0, as the seed array is empty
+  foo(); # returns 0.23
+  foo(); # returns 0.34
+  foo(); # returns a number just barely less than one
+  foo(); # returns 0, as the seed array is empty
+  
+  # object-oriented, for use in the current package
+  use Test::MockRandom ();
+  my $nrng = Test::MockRandom->new(0.42, 0.23);
+  $nrng->rand(); # returns 0.42
   
 =head1 DESCRIPTION
 
@@ -58,114 +54,154 @@ they must be between 0 (inclusive) and 1 (exclusive).  In order to facilitate
 generating and testing a nearly-one number, this module exports the function
 C<oneish>, which returns a number just fractionally less than one.  
 
-Depending on how this module is called with C<use>, it will export C<rand>
-either to the current package or to another specified package (e.g. a class
-being tested) or even globally.  This module also includes the function
-C<export_rand_to> which can be used to explictly override rand in another
-package after C<use> has been called.  See L</USAGE> for details.
+Depending on how this module is called with C<use>, it will export C<rand> to a
+specified package (e.g. a class being tested) effectively overriding and
+intercepting calls in that package to the built-in C<rand>.  It can also
+override C<rand> in the current package or even globally.  In all
+of these cases, it also exports C<srand> and C<oneish> to the current package
+in order to control the output of C<rand>.  See L</USAGE> for details.
 
 Alternatively, this module can be used to generate objects, with each object
 maintaining its own distinct seed array.
 
 =head1 USAGE
 
-=head2 Overriding C<rand> in the current package
+By default, Test::MockRandom does not export any functions.  This still allows
+object-oriented use by calling C<Test::MockRandom-E<gt>new(@seeds)>.  In order
+for Test::MockRandom to be more useful, arguments must be provided during the
+call to C<use>.
 
-To override C<rand> in the current package, simply C<use> the module
-as normal. 
+=head2 C<use Test::MockRandom 'Target::Package'>
 
- use Test::MockRandom;
+The simplest way to intercept C<rand> in another package is to provide the
+name(s) of the package(s) for interception as arguments in the C<use>
+statement.  This will export C<rand> to the listed packages and will export
+C<srand> and C<oneish> to the current package to control the behavior of
+C<rand>.  You B<must> C<use> Test::MockRandom before you C<use> the target
+package.  This is a typical case for testing a module that uses random numbers:
 
-This imports C<rand> and C<srand> into the current namespace, masking any such
-calls from reaching the built-in functions.  It also imports C<oneish>, and
-C<export_rand_to>.
-
-=head2 Overriding C<rand> in a different package with C<use>
-
-There are two ways to override C<rand> in different package.  The simplest is
-to provide the name(s) of the package to be overridden in the C<use> statement.
-This will export C<rand> to the listed packages and will export C<srand>,
-C<oneish>, and C<export_rand_to> to the current package.  You must C<use>
-Test::MockRandom before you C<use> the target package.  This is a typical case
-for testing a module that uses random numbers:
-
- use Test::More;
- use Test::MockRandom qw( Some::Package );
+ use Test::More 'no_plan';
+ use Test::MockRandom 'Some::Package';
  BEGIN { use_ok( Some::Package ) }
  
+ # assume sub foo { return rand } was imported from Some::Package
+ 
  srand(0.5)
- # assume sub foo { return rand } in Some::Package
- Some::Package::foo() # returns 0.5
+ is( foo(), 0.5, "is foo() 0.5?") # test gives "ok"
 
-If you wish to export C<rand> to both another package and the current package,
-simply include the current package in the list provided to C<use>.  All of the
-following idioms work.
+If multiple package names are specified, C<rand> will be exported to all
+of them.
 
- use Test::MockRandom qw( main Some::Package );
+If you wish to export C<rand> to the current package, simply provide
+C<__PACKAGE__> as the parameter for C<use>, or C<main> if importing
+to a script without a specified package.  This can be part of a
+list provided to C<use>.  All of the following idioms work:
+
+ use Test::MockRandom qw( main Some::Package ); # Assumes a script
  use Test::MockRandom __PACKAGE__, 'Some::Package';
 
  # The following doesn't interpolate __PACKAGE__ as above, but 
  # Test::MockRandom will still DWIM and handle it correctly
 
  use Test::MockRandom qw( __PACKAGE__ Some::Package );
- 
-=head2 Overriding C<rand> in a different package explicitly with
-C<export_rand_to>
 
-In order to override the built-in C<rand> in another package, 
-Test::MockRandom must export its own C<rand> function B<before> the 
-target package is compiled.  The simple approach (described above) of
-providing the target package in the C<use Test::MockRandom> statement
-accomplishes this because C<use> is equivalent to a C<require> and C<import>
-within a C<BEGIN> block.  To explicitly override C<rand> in another
-package, you can also call C<export_rand_to>, but it must be enclosed in
-a C<BEGIN> block of its own:
+=head2 C<use Test::MockRandom { %customized }>
+
+As an alternative to a package name as an argument to C<use>,
+Test::MockRandom will also accept a hash reference with a custom
+set of instructions for how to export functions:
+
+ use Test::MockRandom {
+    rand   => [ Some::Package, {Another::Package => 'random'} ],
+    srand  => { Another::Package => 'seed' }, 
+    oneish => __PACKAGE__
+ };
+
+The keys of the hash may be any of C<rand>, C<srand>, and C<oneish>.  The
+values of the hash give instructions for where to export the symbol
+corresponding to the key.  These are interpreted as follows, depending on their
+type:
+
+=over
+
+=item *
+
+String: a package to which Test::MockRandom will export the symbol
+
+=item *
+
+Hash Reference: the key is the package to which Test::MockRandom will export
+the symbol and the value is the name under which it will be exported
+
+=item *
+
+Array Reference: a list of strings or hash references which will be handled
+as above
+
+=back
+
+=head2 C<Test::MockRandom-E<gt>export_rand_to( 'Target::Package' =E<gt> 'rand_alias' )>
+
+In order to intercept the built-in C<rand> in another package, 
+Test::MockRandom must export its own C<rand> function to the 
+target package B<before> the target package is compiled, thus overriding
+calls to the built-in.  The simple approach (described above) of providing the
+target package name in the C<use Test::MockRandom> statement accomplishes this
+because C<use> is equivalent to a C<require> and C<import> within a C<BEGIN>
+block.  To explicitly intercept C<rand> in another package, you can also call
+C<export_rand_to>, but it must be enclosed in a C<BEGIN> block of its own.  The
+explicit form also support function aliasing just as with the custom approach
+with C<use>, described above:
 
  use Test::MockRandom;
- BEGIN { Test::MockRandom::export_rand_to( 'AnotherPackage' ); }
+ BEGIN {Test::MockRandom->export_rand_to('AnotherPackage'=>'random')}
  use AnotherPackage;
  
 This C<BEGIN> block must not include a C<use> statement for the package to be
-overridden, or perl will compile the package to be overridden before the
-C<export_rand_to> function has a chance to execute and override the system
-C<rand>.  This is very important in testing.  The C<export_rand_to> call must
-be in a separate C<BEGIN> block from a C<use_ok> test, which should be enclosed
-in a C<BEGIN> block of its own: 
+intercepted, or perl will compile the package to be intercepted before the
+C<export_rand_to> function has a chance to execute and intercept calls to 
+the built-in C<rand>.  This is very important in testing.  The C<export_rand_to>
+call must be in a separate C<BEGIN> block from a C<use> or C<use_ok> test,
+which should be enclosed in a C<BEGIN> block of its own: 
  
+ use Test::More tests => 1;
  use Test::MockRandom;
- BEGIN { Test::MockRandom::export_rand_to( 'AnotherPackage' ); }
+ BEGIN { Test::MockRandom->export_rand_to( 'AnotherPackage' ); }
  BEGIN { use_ok( 'AnotherPackage' ); }
 
-Given these cautions, it's probably best to use the simple approach with
-C<use>, which does the right thing in most circumstances.
+Given these cautions, it's probably best to use either the simple or custom
+approach with C<use>, which does the right thing in most circumstances.  Should
+additional explicit customization be necessary, Test::MockRandom also provides
+C<export_srand_to> and C<export_oneish_to>.
 
-=head2 Overriding C<rand> globally
+=head2 Overriding C<rand> globally: C<use Test::MockRandom 'CORE::GLOBAL'>
 
-This is just like overriding C<rand> in a package, except that you
-override it in C<CORE::GLOBAL>. 
+This is just like intercepting C<rand> in a package, except that you
+do it globally by overriding the built-in function in C<CORE::GLOBAL>. 
 
  use Test::MockRandom 'CORE::GLOBAL';
  
  # or
 
- BEGIN { Test::MockRandom::export_rand_to('CORE::GLOBAL') }
+ BEGIN { Test::MockRandom->export_rand_to('CORE::GLOBAL') }
 
-You can always access the real built-in C<rand> by calling it explicitly as
+You can always access the real, built-in C<rand> by calling it explicitly as
 C<CORE::rand>.
 
-=head2 Overriding C<rand> in a package that also contains a C<rand> function
+=head2 Intercepting C<rand> in a package that also contains a C<rand> function
 
 This is tricky as the order in which the symbol table is manipulated will lead
 to very different results.  This can be done safely (maybe) if the module uses
-the same rand syntax/prototype as the system call.  In this case, you will need
-to do an explicit override (as above) but do it B<after> importing the package.
-I.e.:
+the same rand syntax/prototype as the system call but offers them up as method
+calls which resolve at run-time instead of compile time.  In this case, you
+will need to do an explicit intercept (as above) but do it B<after> importing
+the package.  I.e.:
 
- use Test::MockRandom;
+ use Test::MockRandom 'SomeRandPackage';
  use SomeRandPackage;
- BEGIN { Test::MockRandom::export_rand_to('SomeRandPackage');
+ BEGIN { Test::MockRandom->export_rand_to('SomeRandPackage');
 
-The first line is mostly to get the right exporting of auxilliary function to
+The first line is necessary to get C<srand> and C<oneish> exported to
 the current package.  The second line will define a C<sub rand> in 
 C<SomeRandPackage>, overriding the results of the first line.  The third
 line then re-overrides the C<rand>.  You may see warnings about C<rand> 
@@ -173,8 +209,9 @@ being redefined.
 
 Depending on how your C<rand> is written and used, there is a good likelihood
 that this isn't going to do what you're expecting, no matter what.  If your
-package that defines C<rand> relies upon the system C<CORE::GLOBAL::rand>, then
-you may be best off overriding that instead.
+package that defines C<rand> relies internally upon the system
+C<CORE::GLOBAL::rand> function, then you may be best off overriding that
+instead.
 
 =head1 FUNCTIONS
 
@@ -216,7 +253,7 @@ sub new {
 
 If called as a bare function call or package method, sets the seed list
 for bare/package calls to C<rand>.  If called as an object method,
-sets the seed list for that object.
+sets the seed list for that object only.
 
 =cut
 
@@ -309,37 +346,30 @@ sub oneish {
 
 =head2 C<export_rand_to>
 
- export_rand_to( 'Some::Other::Package' );
+ Test::MockRandom->export_rand_to( 'Some::Class' );
+ Test::MockRandom->export_rand_to( 'Some::Class' => 'random' );
 
-This function exports C<rand> into another package 
-namespace.  This is useful in testing object which call C<rand>.  E.g.,
-
- package Some::Class;
- sub foo { print rand(); }
-
- package main;
- use Test::MockRandom;
- export_rand_to( 'Some::Class' );
- srand(0.5);
- Some::Class::foo();   # prints "0.5"
+This function exports C<rand> into the specified package namespace.  It must be
+called as a class function.  If a second argument is provided, it is taken as
+the symbol name used in the other package as the alias to C<rand>:
  
-Note that this uses the Test::MockRandom package globals, not class objects.
-So a call to C<srand> in the main package still affects the results of C<rand>
-called in C<Some::Class>.
+ use Test::MockRandom;
+ BEGIN { Test::MockRandom->export_rand_to( 'Some::Class' => 'random' ); }
+ use Some::Class;
+ srand (0.5);
+ print Some::Class::random(); # prints 0.5
 
-The effect of this function is highly dependent on when it is called in the 
-compile cycle.  See L</USAGE> for important details and warnings.
+It can also be used to explicitly intercept C<rand> after Test::MockRandom has
+been loaded.  The effect of this function is highly dependent on when it is
+called in the compile cycle and should usually called from within a BEGIN
+block.  See L</USAGE> for details.
+
+Most users will not need this function.
 
 =cut
 
 sub export_rand_to {
-    my $target = $_[ ref($_[0]) ? 1 : 0 ]
-        or croak("export_rand_to requires a package name");
-    {
-        no strict 'refs';
-        *{"${target}::rand"} = \&Test::MockRandom::rand;
-    }
-    return;
+    _export_fcn_to(shift, "rand", @_);
 }
 
 #--------------------------------------------------------------------------#
@@ -348,36 +378,110 @@ sub export_rand_to {
 
 =head2 C<export_srand_to>
 
- export_srand_to( 'Some::Other::Package' );
+ Test::MockRandom->export_srand_to( 'Some::Class' );
+ Test::MockRandom->export_srand_to( 'Some::Class' => 'seed' );
 
-This function exports C<srand> into another package 
-namespace.  This is useful in testing object which call C<srand>.  E.g.,
-
- package Some::Class;
- sub seed { srand(shift); }
-
- package main;
- use Test::MockRandom;
- export_srand_to( 'Some::Class' );
- Some::Class::seed(0.5);
- Some::Class::foo();   # prints "0.5"
+This function exports C<srand> into the specified package namespace.  It must be 
+called as a class function.  If a second argument is provided, it is taken as
+the symbol name to use in the other package as the alias for C<srand>.
+This function may be useful if another package wraps C<srand>:
  
-Note that this uses the Test::MockRandom package globals, not class objects.
-So a call to C<srand> in the main package still affects the results of C<rand>
-called in C<Some::Class>.
+ # In Some/Class.pm
+ package Some::Class;
+ sub seed { srand(shift) }
+ sub foo  { rand }
 
-See caveats in C<export_rand_to> about the compile cycle.
+ # In a script
+ use Test::MockRandom 'Some::Class';
+ BEGIN { Test::MockRandom->export_srand_to( 'Some::Class' ); }
+ use Some::Class;
+ seed(0.5);
+ print foo();   # prints "0.5"
+
+The effect of this function is highly dependent on when it is called in the
+compile cycle and should usually be called from within a BEGIN block.  See
+L</USAGE> for details.
+
+Most users will not need this function.  
 
 =cut
 
 sub export_srand_to {
-    my $target = $_[ ref($_[0]) ? 1 : 0 ]
-        or croak("export_srand_to requires a package name");
+    _export_fcn_to(shift, "srand", @_);
+}
+
+
+#--------------------------------------------------------------------------#
+# export_oneish_to()
+#--------------------------------------------------------------------------#
+
+=head2 C<export_oneish_to>
+
+ Test::MockRandom->export_oneish_to( 'Some::Class' );
+ Test::MockRandom->export_oneish_to( 'Some::Class' => 'nearly_one' );
+
+This function exports C<oneish> into the specified package namespace.  It must
+be called as a class function.  If a second argument is provided, it is taken
+as the symbol name to use in the other package as the alias for C<oneish>.  
+Since C<oneish> is usually only used in a test script, this function is likely
+only necessary to alias C<oneish> to some other name in the current package:
+
+ use Test::MockRandom 'Some::Class';
+ BEGIN { Test::MockRandom->export_oneish_to( __PACKAGE__, "one" ); }
+ use Some::Class;
+ seed( one() );
+ print foo();   # prints a value very close to one
+
+The effect of this function is highly dependent on when it is called in the
+compile cycle and should usually be called from within a BEGIN block.  See
+L</USAGE> for details.
+
+Most users will not need this function.  
+
+=cut
+
+sub export_oneish_to {
+    _export_fcn_to(shift, "oneish", @_);
+}
+
+#--------------------------------------------------------------------------#
+# _export_fcn_to
+#--------------------------------------------------------------------------#
+
+sub _export_fcn_to {
+    my ($self, $fcn, $pkg, $alias) = @_;
+    croak "Must call to export_${fcn}_to() as a class method"
+        unless ( $self eq __PACKAGE__ );
+    croak("export_${fcn}_to() requires a package name") unless $pkg;
+    _export_symbol($fcn,$pkg,$alias);
+}
+
+#--------------------------------------------------------------------------#
+# _export_symbol()
+#--------------------------------------------------------------------------#
+
+sub _export_symbol {
+    my ($sym,$pkg,$alias) = @_;
+    $alias ||= $sym;
     {
         no strict 'refs';
-        *{"${target}::srand"} = \&Test::MockRandom::srand;
+        no warnings 'redefine';
+        *{"${pkg}::${alias}"} = \&{"Test::MockRandom::${sym}"};
     }
-    return;
+}
+
+#--------------------------------------------------------------------------#
+# _custom_export
+#--------------------------------------------------------------------------#
+
+sub _custom_export {
+    my ($sym,$custom) = @_;
+    if ( ref($custom) eq 'HASH' ) {
+        _export_symbol( $sym, %$custom ); # flatten { pkg => 'alias' }
+    }
+    else {
+        _export_symbol( $sym, $custom );
+    }
 }
 
 #--------------------------------------------------------------------------#
@@ -386,24 +490,30 @@ sub export_srand_to {
 
 sub import {
     my $class = shift;
+    my $caller = caller(0);
     
-    # if no arguments
-    unless (@_) {
-        for (@EXPORT) {
-            $class->export_to_level(1, undef, $_);
-        }
-        return;
-    }
+    # Nothing exported by default or if empty string
+    return unless @_;
+    return if ( @_ == 1 && $_[0] eq '' );
 
-    # otherwise, export rand to the specified package and
-    # the other functions to the caller
-    for ( @_ ) {
-        /^__PACKAGE__$/ and do { export_rand_to(caller(0))};
-        export_rand_to($_);
+    for my $tgt ( @_ ) {
+        # custom handling if it's a hashref
+        if ( ref($tgt) eq "HASH" ) {
+            for my $sym ( keys %$tgt ) {
+                croak "Unrecognized symbol '$sym'" 
+                    unless grep { $sym eq $_ } qw (rand srand oneish);
+                my @custom = ref($tgt->{$sym}) eq 'ARRAY' ? 
+                @{$tgt->{$sym}} : $tgt->{$sym};
+                _custom_export( $sym, $_ ) for ( @custom );
+            }
+        }
+        # otherwise, export rand to target and srand/oneish to caller
+        else {
+            my $pkg = ($tgt =~ /^__PACKAGE__$/) ? $caller : $tgt; # DWIM
+            _export_symbol("rand",$pkg);
+            _export_symbol($_,$caller) for qw( srand oneish );
+        }
     }
-    $class->export_to_level(1, undef, $_) 
-        for ( qw( srand oneish export_rand_to ) );
-	
 }
 
 1; #this line is important and will help the module return a true value
@@ -417,14 +527,13 @@ http://rt.cpan.org/NoAuth/Bugs.html?Dist=Test-MockRandom
 
 =head1 AUTHOR
 
- David A. Golden (DAGOLDEN)
- dagolden@dagolden.com
+David A Golden <dagolden@cpan.org>
  
- http://dagolden.com/
+http://dagolden.com/
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 by David A. Golden
+Copyright (c) 2004-2005 by David A. Golden
 
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
