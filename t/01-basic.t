@@ -16,7 +16,7 @@ BEGIN { use_ok( 'Test::MockRandom' ); }
 
 can_ok ('Test::MockRandom', 'srand', 'rand', 'oneish');
 
-is (oneish(), (2**31 - 1)/(2**31), 'is oneish nearly one');
+is (oneish(), (2**32 - 1)/(2**32), 'is oneish nearly one');
 is (rand(), 0, 'is uninitialized call to rand() equal to zero');
 
 dies_ok { srand(1) } 'does srand die if argument is equal to one';

@@ -2,7 +2,7 @@ package Test::MockRandom;
 use strict;
 use warnings;
 use vars qw ($VERSION);
-$VERSION = "0.9";
+$VERSION = "0.91";
 
 # Required modules
 use Carp;
@@ -11,7 +11,7 @@ use Carp;
 use base qw( Exporter );
 
 use vars qw(@EXPORT);
-@EXPORT = qw( srand rand oneish );
+@EXPORT = qw( srand rand oneish export_rand_to );
 
 #--------------------------------------------------------------------------#
 # main pod documentation #####
@@ -40,8 +40,10 @@ generation
   $nrng->rand(); # returns 0.34
   $nrng->rand(); # returns a number just barely less than one
   $nrng->rand(); # returns 0, as the seed array is empty
-
-
+  
+  # mask rand in another package
+  export_rand_to( 'Some::Other::Package' );
+  
 =head1 DESCRIPTION
 
 This perhaps ridiculous-seeming module was created to test routines that
@@ -54,7 +56,9 @@ object maintaining its own distinct seed array.
 Seed numbers must follow the expected output from C<rand> with no arguments --
 they must be between 0 (inclusive) and 1 (exclusive).  In order to facilitate
 generating a nearly-one number, this module exports the function C<oneish>,
-which returns a number just fractionally less than one.
+which returns a number just fractionally less than one.  This module also
+exports the function C<export_rand_to> which can be used to hijack rand in
+another namespace (e.g., a class being tested).
 
 If for some reason you want to use this module without hijacking the built-in
 functions (i.e. objects only), you can use the module without any imported
@@ -89,6 +93,7 @@ sub new {
     return $self;
 }
 
+
 #--------------------------------------------------------------------------#
 # srand()
 #--------------------------------------------------------------------------#
@@ -108,10 +113,11 @@ sub srand {
     if (ref ($_[0]) eq __PACKAGE__) {
         my $self = shift;
         @$self = $self->_test_srand(@_);
+        return;
     } else {
         @data = Test::MockRandom->_test_srand(@_);
+        return;
     }
-    return;
 }
 
 sub _test_srand {
@@ -169,6 +175,48 @@ sub rand {
 
 
 #--------------------------------------------------------------------------#
+# export_rand_to()
+#--------------------------------------------------------------------------#
+
+=head2 C<export_rand_to>
+
+ export_rand_to( 'Some::Other::Package' );
+
+As the name implies, this function exports C<rand> into another package 
+namespace.  This is useful in testing object which call C<rand>.  E.g.,
+
+ package Some::Class;
+ sub foo { print rand(); }
+
+ package main;
+ use Test::MockRandom;
+ export_rand_to( 'Some::Class' );
+ srand(0.5);
+ Some::Class::foo();   # prints "0.5"
+ 
+Note that this uses the Test::MockRandom package globals, not class objects.
+So a call to C<srand> in this package still affects the results of C<rand>
+called in C<Some::Class>.
+
+Using this on an object oriented package that also defines a C<rand> method
+will likely cause major errors.
+
+=cut
+
+sub export_rand_to {
+    my $self;
+    if (ref ($_[0]) eq __PACKAGE__) {
+        $self = shift;
+    } 
+    my $target = shift or croak("export_rand_to requires a package name");
+    {
+        no strict 'refs';
+        *{$target."::rand"} = *{__PACKAGE__."::rand"};
+    }
+    return;
+}
+
+#--------------------------------------------------------------------------#
 # oneish()
 #--------------------------------------------------------------------------#
 
@@ -177,15 +225,14 @@ sub rand {
  srand( oneish() );
  if ( rand() == oneish() ) { print "It's almost one." };
 
-A utility function to return a nearly-one value.  Equal to ( 2^31 - 1 ) / 2^31.
+A utility function to return a nearly-one value.  Equal to ( 2^32 - 1 ) / 2^32.
 Useful in C<srand> and test functions.
 
 =cut
 
 sub oneish {
-    return (2**31-1)/(2**31);	
+    return (2**32-1)/(2**32);	
 }
-
 
 1; #this line is important and will help the module return a true value
 __END__
@@ -214,6 +261,12 @@ LICENSE file included with this module.
 
 =head1 SEE ALSO
 
-perl(1).
+=over
+
+=item L<Test::MockObject>
+
+=item L<Test::MockModule>
+
+=back
 
 =cut

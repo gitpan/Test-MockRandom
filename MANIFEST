@@ -3,8 +3,9 @@ Changes
 lib/Test/MockRandom.pm
 LICENSE
 Makefile.PL
-MANIFEST
+MANIFEST			This list of files
 META.yml
 README
-t/Test_MockRandom.t
+t/01-basic.t
+t/02-package-override.t
 Todo

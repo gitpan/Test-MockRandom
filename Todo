@@ -1,4 +1,4 @@
 TODO list for Perl module Test::MockRandom
 
-- Nothing yet
+- Consider changing onish to something like (2**32-1)/(2**32)
 

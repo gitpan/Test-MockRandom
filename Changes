@@ -1,5 +1,10 @@
 Revision history for Perl module Test::MockRandom
 
+0.91 Thu Dec 16 13:17:46 EST 2004
+    - Added Test::MockObject and Test::MockModule to the "See Also" section
+    - changed oneish to use 2**32 instead of 2**31
+    - added function "export_rand_to"
+
 0.90 Tue Dec 14 17:03:45 EST 2004
     - first public release
 
