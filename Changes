@@ -1,5 +1,9 @@
 Revision history for Perl module Test::MockRandom
 
+0.93 Wed Jan  5 14:44:00 EST 2005
+    - added export_srand_to function
+    - cleaned up Todo
+
 0.92 Tue Dec 21 00:21:50 EST 2004
     - changed API for "use" to facilitate exporting rand to other packages
       (the common case when used in test scripts)

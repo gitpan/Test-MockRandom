@@ -15,6 +15,7 @@ t/06-import-override-global.t
 t/07-import-override-PACKAGE.t
 t/08-import-override-PACKAGE-hack.t
 t/09-import-override-reoverride.t
+t/10-export_srand_to.t
 t/SomePackage.pm
 t/SomeRandPackage.pm
 Todo

@@ -2,7 +2,7 @@ package Test::MockRandom;
 use strict;
 use warnings;
 use vars qw ($VERSION);
-$VERSION = "0.92";
+$VERSION = "0.93";
 
 # Required modules
 use Carp;
@@ -10,7 +10,7 @@ use Carp;
 # Exporter
 use Exporter;
 use vars qw(@EXPORT @ISA);
-@EXPORT = qw( srand rand oneish export_rand_to );
+@EXPORT = qw( srand rand oneish export_rand_to export_srand_to );
 @ISA = qw( Exporter );
 
 #--------------------------------------------------------------------------#
@@ -338,6 +338,44 @@ sub export_rand_to {
     {
         no strict 'refs';
         *{"${target}::rand"} = \&Test::MockRandom::rand;
+    }
+    return;
+}
+
+#--------------------------------------------------------------------------#
+# export_srand_to()
+#--------------------------------------------------------------------------#
+
+=head2 C<export_srand_to>
+
+ export_srand_to( 'Some::Other::Package' );
+
+This function exports C<srand> into another package 
+namespace.  This is useful in testing object which call C<srand>.  E.g.,
+
+ package Some::Class;
+ sub seed { srand(shift); }
+
+ package main;
+ use Test::MockRandom;
+ export_srand_to( 'Some::Class' );
+ Some::Class::seed(0.5);
+ Some::Class::foo();   # prints "0.5"
+ 
+Note that this uses the Test::MockRandom package globals, not class objects.
+So a call to C<srand> in the main package still affects the results of C<rand>
+called in C<Some::Class>.
+
+See caveats in C<export_rand_to> about the compile cycle.
+
+=cut
+
+sub export_srand_to {
+    my $target = $_[ ref($_[0]) ? 1 : 0 ]
+        or croak("export_srand_to requires a package name");
+    {
+        no strict 'refs';
+        *{"${target}::srand"} = \&Test::MockRandom::srand;
     }
     return;
 }

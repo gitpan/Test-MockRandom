@@ -1,40 +1,16 @@
 TODO list for Perl module Test::MockRandom
 
-- Write better documentation for usage
+# next release
+
+- Better documentation on export_srand_to
+- Catch/suppress rand redefined warning in t/09
+
+# eventually
+
+- Improve API or default exports?
+    - i.e. no args -> export srand and rand to current package
+    - for args, export rand to args and srand to current package
 
 - Write a matching "unimport"?
-
-#--------------------------------------------------------------------------#
-Interface brainstorming:
-
-use Test::MockRandom override => 'Some::Module';
-use Test::MockRandom override => [ qw( Some::Module Some::OtherModule ) ];
-use Test::MockRandom override => 'Some::Module';
-use Test::MockRandom qw( Some::Module Some::Other::Module );
-
-a) Called with no arguments
-
-use Test::MockRandom; # imports rand and srand to current package
-
-b) Called with empty list argument
-
-use Test::MockRandom (); # imports nothing -> for object usage in current package
-
-c) Called with module names as arguments
-
-use Test::MockRandom qw( Some::Module Some::Other::Module );
-
-Imports srand to current package and exports rand to named modules => for remote overriding of rand
-
-Can import to current module as well with 
-
-use Test::MockRandom __PACKAGE__, qw( Some::Module );
-
-(Make it smart enough so that "use Test::MockRandom qw( __PACKAGE__, Some::Module );" works, too
-
-Can override globally with 
-
-use Test::MockRandom 'CORE::GLOBAL';
-
 
 
