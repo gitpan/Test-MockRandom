@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Test-MockRandom
-version: 0.91
+version: 0.92
 author: ~
 abstract: |-
   Replaces random number generation with non-random number
@@ -12,5 +12,5 @@ build_requires:
 provides:
   Test::MockRandom:
     file: lib/Test/MockRandom.pm
-    version: 0.91
+    version: 0.92
 generated_by: Module::Build version 0.2606

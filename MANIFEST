@@ -7,5 +7,14 @@ MANIFEST			This list of files
 META.yml
 README
 t/01-basic.t
-t/02-package-override.t
+t/02-export_rand_to.t
+t/03-explicit-override.t
+t/04-null-import.t
+t/05-import-override.t
+t/06-import-override-global.t
+t/07-import-override-PACKAGE.t
+t/08-import-override-PACKAGE-hack.t
+t/09-import-override-reoverride.t
+t/SomePackage.pm
+t/SomeRandPackage.pm
 Todo

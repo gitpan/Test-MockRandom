@@ -1,5 +1,11 @@
 Revision history for Perl module Test::MockRandom
 
+0.92 Tue Dec 21 00:21:50 EST 2004
+    - changed API for "use" to facilitate exporting rand to other packages
+      (the common case when used in test scripts)
+    - improved documentation substantially, particularly around "use"
+    - expanded the test suite
+    
 0.91 Thu Dec 16 13:17:46 EST 2004
     - Added Test::MockObject and Test::MockModule to the "See Also" section
     - changed oneish to use 2**32 instead of 2**31
