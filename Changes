@@ -1,5 +1,8 @@
 Revision history for Perl module Test::MockRandom
 
+0.95 Tue Mar  8 22:46:51 EST 2005
+    - added pod and pod coverage tests
+
 0.94 Mon Jan 31 21:11:50 EST 2005
     - changed exports so that nothing is exported by default
     - API for "use" changed substantially -- see POD for new API

@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Test-MockRandom
-version: 0.94
+version: 0.95
 author:
   - David A Golden <dagolden@cpan.org>
 abstract: |-
@@ -15,5 +15,5 @@ build_requires:
 provides:
   Test::MockRandom:
     file: lib/Test/MockRandom.pm
-    version: 0.94
-generated_by: Module::Build version 0.2606
+    version: 0.95
+generated_by: Module::Build version 0.2608

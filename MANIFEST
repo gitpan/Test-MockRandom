@@ -7,6 +7,8 @@ MANIFEST			This list of files
 META.yml
 README
 t/00-null-import.t
+t/00-pod.t
+t/00-podcover.t
 t/01-OO-syntax.t
 t/02-override-PACKAGE.t
 t/03-override-PACKAGE-dwim-hack.t
