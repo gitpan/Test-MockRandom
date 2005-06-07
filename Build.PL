@@ -3,13 +3,16 @@ use Module::Build;
 
 Module::Build->new
     ( module_name     => 'Test::MockRandom',
-      create_makefile_pl => "passthrough",
+      create_makefile_pl => "traditional",
+      create_readme => 1,
       license         => 'perl',
       requires => {
           perl => 5.005,
       },
       build_requires => {
-          Test::Exception => 0.19,
-          Test::More => 0.54, 
+          Test::Exception => 0.20,
+          Test::More => 0.6, # (0.41 since perl 5.007003, 0.6 is new)
+          Test::Pod => 1.20,
+          Test::Pod::Coverage => 1.06,
       },
 	)->create_build_script;
