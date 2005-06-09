@@ -6,11 +6,10 @@ WriteMakefile
           'VERSION_FROM' => 'lib/Test/MockRandom.pm',
           'PREREQ_PM' => {
                            'Test::Exception' => '0.2',
-                           'Test::More' => '0.6',
-                           'Test::Pod' => '1.2',
-                           'Test::Pod::Coverage' => '1.06'
+                           'Test::More' => '0.6'
                          },
           'INSTALLDIRS' => 'site',
+          'EXE_FILES' => [],
           'PL_FILES' => {}
         )
 ;

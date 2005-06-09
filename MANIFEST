@@ -4,11 +4,10 @@ lib/Test/MockRandom.pm
 LICENSE
 Makefile.PL
 MANIFEST			This list of files
+MANIFEST.SKIP
 META.yml
 README
 t/00-null-import.t
-t/00-pod.t
-t/00-podcover.t
 t/01-OO-syntax.t
 t/02-override-PACKAGE.t
 t/03-override-PACKAGE-dwim-hack.t
